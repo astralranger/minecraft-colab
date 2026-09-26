@@ -1,4 +1,4 @@
-# 🎮 Minecraft Colab (Java Edition 26.3)
+# 🎮 Minecraft Colab (Java Edition)
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/astralranger/minecraft-colab/blob/main/MineColab.ipynb)
 ![Minecraft Version](https://img.shields.io/badge/Minecraft-26.3%20Java-brightgreen?logo=minecraft)
