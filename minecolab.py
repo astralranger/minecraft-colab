@@ -19,7 +19,8 @@
 | :--- | :--- | :---: |
 | 🚀 **Step 1: Setup** | Initialize dependencies & mount Google Drive | [Jump to Setup](#scrollTo=section-setup) |
 | 🎯 **Step 2: Choose / Create Server** | **Select existing server or create new with custom name & version** | [**Jump to Step 2**](#scrollTo=section-create) |
-| 🎮 **Step 3: Launch Console** | Run the server with fast NVMe sync & tunnel | [**Jump to Server Console**](#scrollTo=section-console) |
+| 👑 **Step 3: Admin & Gamemodes (OP)** | Grant admin/operator permissions, creative mode, RCON | [**Jump to Admin**](#scrollTo=section-admin-op) |
+| 🎮 **Step 4: Launch Console** | Run the server with fast NVMe sync & tunnel | [**Jump to Server Console**](#scrollTo=section-console) |
 | ⚙️ **Server Options** | Custom MOTD, icon, slots, PvP, difficulty | [Jump to Options](#scrollTo=section-options) |
 | 📜 **Live Logs** | Read real-time server output & player events | [Jump to Logs](#scrollTo=section-logs) |
 | 📰 **Software & Tunnels** | Reinstall software or switch tunnel provider | [Jump to Software](#scrollTo=section-software) |
