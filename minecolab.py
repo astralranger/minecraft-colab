@@ -1,40 +1,48 @@
-# -*- coding: utf-8 -*-
 # %% [markdown]
 """
-# Minecraft Colab - High Performance Minecraft 26.3 Server on Google Colab
-# https://github.com/astralranger/minecraft-colab
+# ⛏️ **MineColab Improved**
+### High-Performance Minecraft Java & Bedrock Server on Google Colab
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/astralranger/minecraft-colab/blob/main/MineColab.ipynb) ![Minecraft](https://img.shields.io/badge/Minecraft-26.3%20%7C%201.21.x%20%7C%201.20.x-green?style=flat&logo=minecraft) ![Java](https://img.shields.io/badge/Java-21%20%2F%2025%20LTS-orange?style=flat&logo=openjdk) ![Tunnel](https://img.shields.io/badge/Tunnel-Playit.gg%20%2F%20Ngrok-blue?style=flat)
+
+> 🌟 **Key Features:**
+> - ⚡ **Ultra-Fast Local Storage**: Runs on Colab's NVMe drive with automatic background sync to **Google Drive** for complete world persistence.
+> - 🌐 **Zero-Config Tunneling**: Integrated **Playit.gg** requires no port forwarding or accounts; Ngrok, Argo, and Zrok are also supported.
+> - 🔓 **TLauncher / Offline Support**: Pre-configured with `online-mode=false` so all your friends can join.
+> - 🎮 **Wide Version Support**: Purpur, Paper, Fabric, Vanilla, Bedrock, and Forge.
+
+---
+
+### 🗺️ **Quick Navigation**
+
+| Section | Description | Action |
+| :--- | :--- | :---: |
+| 🚀 **Step 1: Setup** | Initialize dependencies & mount Google Drive | [Jump to Setup](#scrollTo=section-setup) |
+| 🎯 **Step 2: Choose / Create Server** | **Select existing server or create new with custom name & version** | [**Jump to Step 2**](#scrollTo=section-create) |
+| 🎮 **Step 3: Launch Console** | Run the server with fast NVMe sync & tunnel | [**Jump to Server Console**](#scrollTo=section-console) |
+| ⚙️ **Server Options** | Custom MOTD, icon, slots, PvP, difficulty | [Jump to Options](#scrollTo=section-options) |
+| 📜 **Live Logs** | Read real-time server output & player events | [Jump to Logs](#scrollTo=section-logs) |
+| 📰 **Software & Tunnels** | Reinstall software or switch tunnel provider | [Jump to Software](#scrollTo=section-software) |
+| 🧩 **Plugins & Mods** | Direct CurseForge / Modrinth downloader | [Jump to Plugins](#scrollTo=section-plugins) |
+| 📁 **Backups & Maps** | Zip backups & custom world map uploader | [Jump to Backups](#scrollTo=section-files) |
+| ⚡ **Performance (TPS)** | Aikar's flags and server tick optimizations | [Jump to TPS Optimizer](#scrollTo=section-tps) |
+
+---
+
 """
+
 
 # %% [markdown]
 """
-<a href="https://colab.research.google.com/github/astralranger/minecraft-colab/blob/main/MineColab.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
-
->[🔥 Starting](#scrollTo=ihPgtQu9TUs9)
-
->[▶ or 🛑  Console](#scrollTo=a0es2vGmTUs_)
-
->[⚓ Options](#scrollTo=Dc-Gb9a7TUtB)
-
->[📎  Log](#scrollTo=hhwFVhYMTUtB)
-
->[📰  Software](#scrollTo=lGqlIg5nTUtC)
-
->[🎈  Plugins, mods](#scrollTo=BYElubquTUtE)
-
->[📁 File Management](#scrollTo=zhtylbBNTUtG)
+# 🚀 **Step 1: Environment Setup**
 
 
 """
 
-# %% [markdown]
-"""
-----
-"""
 
 # %% [code]
-# @markdown ##**[❗]  Set up** {display-mode: "form"}
-
-# @markdown Check out [wiki of this project](https://minecolabimproved.wiki.gg/es/wiki/MineColab_Improved_Wiki) for more explanations
+# @title 🛠️ Step 1: Initialize Environment & Mount Google Drive { display-mode: "form" }
+# @markdown Run this cell once per session to mount Google Drive and install requirements.
 import requests
 from requests import get
 import sys
@@ -160,15 +168,43 @@ def COLABCONFIG_LOAD(server_name):
   else:
     ERROR('Please check whether you deleted your colabconfig file or not.')
 
-def SERVER_IN_USE(server_name):
-  if exists(f'{drive_path}/{server_name}') and server_name != '':
+def COLABCONFIG(server_name):
+  return f"{drive_path}/{server_name}/colabconfig.json"
+
+def COLABCONFIG_LOAD(server_name):
+  for p in [f"{drive_path}/{server_name}/colabconfig.json", f"{drive_path}/{server_name}/colabconfig.txt"]:
+    if exists(p):
+      try:
+        return load(open(p))
+      except Exception:
+        pass
+  return {"server_type": "purpur", "server_version": "26.3", "tunnel_service": "playit"}
+
+def SERVER_IN_USE(server_name=''):
+  # 1. If explicit server_name given and exists in drive, use it
+  if server_name and exists(f'{drive_path}/{server_name}'):
     return server_name
-  else:
-    serverconfig = load(open(SERVERCONFIG))
-    if serverconfig.get('server_in_use', '') != '':
-      return serverconfig['server_in_use']
-    else:
-      ERROR('Please create a minecraft server first using the Create Server cell!')
+  # 2. Check server_list.txt configuration
+  if exists(SERVERCONFIG):
+    try:
+      serverconfig = load(open(SERVERCONFIG))
+      if serverconfig.get('server_in_use') and exists(f"{drive_path}/{serverconfig['server_in_use']}"):
+        return serverconfig['server_in_use']
+      elif serverconfig.get('server_list'):
+        for s in serverconfig['server_list']:
+          if exists(f"{drive_path}/{s}"):
+            return s
+    except Exception:
+      pass
+  # 3. Scan Google Drive directory directly for server folders
+  if exists(drive_path):
+    try:
+      candidates = [d for d in listdir(drive_path) if isdir(join(drive_path, d)) and d not in ["logs", ".ipynb_checkpoints"]]
+      if candidates:
+        return candidates[0]
+    except Exception:
+      pass
+  ERROR('No Minecraft server found. Please select or create a server in Step 2!')
 
 def JAR_LIST_RUN(server_version):
   return {'generic': 'server.jar', 'vanilla':'server.jar','snapshot': 'server.jar',
@@ -186,67 +222,43 @@ if exists(SERVERCONFIG) == False:
 LOG('Setup Complete!')
 
 
-# %% [code]
-# @title 🔘 Choose server
-# @markdown ####**Choosing minecraft server**
-# @markdown ##### Helping to set the default server_name.
-from os import listdir
-from json import load, dump
-from os.path import exists, isdir, join
-import ipywidgets as widgets
-from jupyter_ui_poll import ui_events
 
-%cd $drive_path
-LOG(f"\nColab Version: {colabversion}")
-serverconfig = load(open(SERVERCONFIG))
-
-def changeserver(server_to_use):
-  global serverconfig
-  if server_to_use in serverconfig.get('server_list', []):
-    serverconfig['server_in_use'] = server_to_use
-  else:
-    serverconfig.setdefault('server_list', []).append(server_to_use)
-    serverconfig['server_in_use'] = server_to_use
-  dump(serverconfig, open(SERVERCONFIG, 'w'))
-  LOG(f'Using server: {server_to_use}')
-
-serverlist = [d for d in listdir(drive_path) if isdir(join(drive_path, d)) and d not in ["logs", ".ipynb_checkpoints"]]
-
-if not serverlist:
-  INFO('No servers found yet. Please proceed to the "Create Server" cell below to create your server!')
-else:
-  if len(serverlist) == 1:
-    changeserver(serverlist[0])
-  else:
-    serverpicker = widgets.Dropdown(description="Server: ", options=[""]+serverlist)
-    display(serverpicker)
-    with ui_events() as poll:
-      while serverpicker.value == '':
-        poll(10)
-        sleep(0.1)
-    serverpicker.close()
-    selserver=serverpicker.value
-    changeserver(selserver)
 
 
 # %% [markdown]
 """
 ---
+# 🎯 **Step 2: Choose or Create Minecraft Server**
+
+> [!IMPORTANT]
+> ### 📍 **Select an Existing Server OR Create a New One**
+> - **`server_action`**: Set to **`Create New Server`** to build a fresh server, or **`Select Existing Server`** to load one already on your Google Drive.
+> - **`server_name`**: Enter the name of your server (e.g. `minecraft_server`, `smp_world`, `vanilla_1_21`). **This server and name will be followed across all cells in this notebook!**
+> - **`version` & `server_type`**: Specify your desired version (e.g. `26.3`, `1.21.4`, `1.20.4`, `1.16.5`) and engine (`purpur`, `paper`, `fabric`, `vanilla`).
+> - Click **Run (▶)** to confirm your selection or generate your new server files.
+
 """
 
-# %% [markdown]
-"""
-# 🔥 **Starting**
----
-
-"""
 
 # %% [code]
-# @title 🛠️ Create Server { display-mode: "form" }
-# @markdown #### **Configure & Create your Minecraft Server**
+# @title 🎯 Step 2: Choose or Create Minecraft Server { display-mode: "form" }
+# @markdown ---
+# @markdown ### 📌 **1. Action: Choose an Existing Server or Create a New One**
+server_action = "Create New Server" # @param ["Create New Server", "Select Existing Server"]
+
+# @markdown ---
+# @markdown ### 🏷️ **2. Server Name**
+# @markdown Enter your server name (or name of an existing server):
 server_name = "minecraft_26_3" # @param {type:"string"}
-server_type = "purpur" # @param ["purpur", "vanilla", "fabric", "paper"]
+
+# @markdown ---
+# @markdown ### 🎮 **3. Minecraft Version & Software (When creating new server)**
+# @markdown Enter the version to download (e.g. `26.3`, `1.21.4`, `1.20.4`, `1.19.4`, `1.16.5`):
 version = "26.3" # @param {type:"string"}
+server_type = "purpur" # @param ["purpur", "vanilla", "fabric", "paper"]
+
+# @markdown ---
+# @markdown ### 🌐 **4. Network Tunnel**
 tunnel_service = "playit" # @param ["playit", "ngrok", "zrok", "argo", "localtonet"]
 ngrok_token = "" # @param {type:"string"}
 ngrok_region = "us" # @param ["us", "eu", "ap", "au", "sa", "jp", "in"]
@@ -255,111 +267,161 @@ from requests import get
 import requests
 from bs4 import BeautifulSoup
 from time import sleep
-from os.path import exists, join
-from os import makedirs
+from os.path import exists, join, isdir
+from os import makedirs, listdir
 from json import load, dump
 from google.colab import output
+import ipywidgets as widgets
+from jupyter_ui_poll import ui_events
 
 drive_path = '/content/drive/MyDrive/minecraft'
 SERVERCONFIG = f'{drive_path}/server_list.txt'
 
-if server_name == "":
-  ERROR("Please insert a name for your server.")
+if not exists(SERVERCONFIG):
+  dump({"server_list": [], "server_in_use": "", "ngrok_proxy" : {'authtoken' : '', "region" : 'us'}, "zrok_proxy": {"authtoken": ''}, 'localtonet_proxy': {"authtoken": ''}, 'localxpose_proxy': {"authtoken": ''}, 'playit_proxy': {"secretkey": ""}}, open(SERVERCONFIG, 'w'))
 
-def SERVERSJAR(command, server_type=None, version=None):
-  if command == "GetVersions":
-    if server_type == None: ERROR("No server type specified.")
-    if server_type == 'vanilla' or server_type == 'snapshot':
-      rJSON = GET('https://launchermeta.mojang.com/mc/game/version_manifest.json').json()
-      st = 'release' if server_type == 'vanilla' else 'snapshot'
-      return [hit["id"] for hit in rJSON["versions"] if hit["type"] == st]
-    elif server_type == 'purpur':
-      rJSON = GET('https://api.purpurmc.org/v2/purpur').json()
-      return [hit for hit in rJSON["versions"]]
-    elif server_type == 'fabric':
-      rJSON = GET('https://meta.fabricmc.net/v2/versions/game').json()
-      return [hit['version'] for hit in rJSON if hit.get('stable')]
-    elif server_type == 'paper':
-      return ['26.3', '1.21.4', '1.20.4']
-    return ['26.3']
-
-  elif command == "GetDownloadUrl":
-    if version == None: ERROR("No version specified.")
-    if server_type == 'vanilla' or server_type == 'snapshot':
-      rJSON = GET('https://launchermeta.mojang.com/mc/game/version_manifest.json').json()
-      for hit in rJSON["versions"]:
-        if hit['id'] == version:
-          return GET(hit['url']).json()["downloads"]['server']['url']
-      return GET(rJSON["versions"][0]['url']).json()["downloads"]['server']['url']
-
-    elif server_type == 'purpur':
-      purpur_info = GET(f'https://api.purpurmc.org/v2/purpur/{version}').json()
-      build = purpur_info["builds"]["latest"]
-      return f'https://api.purpurmc.org/v2/purpur/{version}/{build}/download'
-
-    elif server_type == 'paper':
-      # Paper v2 API has retired old endpoints, use Purpur (high-perf drop-in Paper fork) for 26.3
-      LOG("[ INFO ] Using Purpur (high performance drop-in Paper fork) for version " + version)
-      purpur_info = GET(f'https://api.purpurmc.org/v2/purpur/{version}').json()
-      build = purpur_info["builds"]["latest"]
-      return f'https://api.purpurmc.org/v2/purpur/{version}/{build}/download'
-
-    elif server_type == 'fabric':
-      installerVersion = GET('https://meta.fabricmc.net/v2/versions/installer').json()[0]["version"]
-      fabricVersion = GET(f'https://meta.fabricmc.net/v2/versions/loader/{version}').json()[0]["loader"]["version"]
-      return f"https://meta.fabricmc.net/v2/versions/loader/{version}/{fabricVersion}/{installerVersion}/server/jar"
-
-    else:
-      ERROR(f'Unsupported server type: {server_type}')
-
-LOG(f"\nColab Version: {colabversion}")
-server_folder = f'{drive_path}/{server_name}'
-
-# Create directories
-makedirs(server_folder, exist_ok=True)
-makedirs(f'{drive_path}/logs', exist_ok=True)
-makedirs(f'{server_folder}/tunnel', exist_ok=True)
-
-# Pre-accept EULA immediately so the server starts cleanly without hanging
-with open(f'{server_folder}/eula.txt', 'w') as f:
-  f.write('eula=true\n')
-
-LOG(f'Setting up server: {server_name}')
-LOG(f'Type: {server_type} | Version: {version} | Tunnel: {tunnel_service}')
-
-# Update serverconfig
 serverconfig = load(open(SERVERCONFIG))
-if server_name not in serverconfig.get('server_list', []):
-  serverconfig.setdefault('server_list', []).append(server_name)
-serverconfig['server_in_use'] = server_name
+available_servers = [d for d in listdir(drive_path) if isdir(join(drive_path, d)) and d not in ["logs", ".ipynb_checkpoints"]]
 
-if tunnel_service == 'ngrok':
-  if "ngrok_proxy" not in serverconfig:
-    serverconfig["ngrok_proxy"] = {"authtoken": "", "region": "us"}
-  if ngrok_token != "":
-    serverconfig['ngrok_proxy']['authtoken'] = ngrok_token
-    serverconfig['ngrok_proxy']['region'] = ngrok_region
-  elif serverconfig['ngrok_proxy'].get('authtoken', '') == "":
-    t = input('Enter your ngrok authtoken (or press enter if already configured): ')
-    if t != "": serverconfig['ngrok_proxy']['authtoken'] = t
+if server_action == "Select Existing Server":
+  selected = ""
+  if server_name.strip() and exists(f'{drive_path}/{server_name.strip()}'):
+    selected = server_name.strip()
+  elif not available_servers:
+    ERROR("No existing servers found in Google Drive! Please switch server_action to 'Create New Server'.")
+  elif len(available_servers) == 1:
+    selected = available_servers[0]
+  else:
+    print_msg_box("Select an existing server from the dropdown below:", title="CHOOSE SERVER")
+    serverpicker = widgets.Dropdown(description="Server: ", options=[""] + available_servers)
+    display(serverpicker)
+    with ui_events() as poll:
+      while serverpicker.value == '':
+        poll(10)
+        sleep(0.1)
+    serverpicker.close()
+    selected = serverpicker.value
 
-dump(serverconfig, open(SERVERCONFIG, 'w'))
+  server_name = selected
+  serverconfig['server_in_use'] = server_name
+  if server_name not in serverconfig.get('server_list', []):
+    serverconfig.setdefault('server_list', []).append(server_name)
+  dump(serverconfig, open(SERVERCONFIG, 'w'))
 
-# Save colabconfig
-colabconfig = {"server_type": server_type, "server_version": version, "tunnel_service": tunnel_service}
-dump(colabconfig, open(COLABCONFIG(server_name), 'w'))
+  c_cfg = COLABCONFIG_LOAD(server_name)
+  version = c_cfg.get('server_version', version)
+  server_type = c_cfg.get('server_type', server_type)
+  tunnel_service = c_cfg.get('tunnel_service', tunnel_service)
 
-# Download jar
-jarname = 'server.jar'
-download_url = SERVERSJAR("GetDownloadUrl", server_type, version)
-LOG(f"Downloading {server_type} {version} server jar...")
-DOWNLOAD_FILE(url=download_url, path=server_folder, file_name=jarname, force=True)
+  print_msg_box(
+    f"Active Server: {server_name}\n"
+    f"Software Type: {server_type}\n"
+    f"Version:       {version}\n"
+    f"Tunnel:        {tunnel_service}\n\n"
+    f"This server is now ACTIVE for all subsequent cells!",
+    indent=2, width=65, title="SERVER SELECTED SUCCESSFULLY"
+  )
 
-LOG(f'\n[ SUCCESS ] Server "{server_name}" created successfully with {server_type} {version}!')
-LOG('Now scroll down to the "Console" cell and click Run to start your server!')
+else: # Create New Server
+  if not server_name.strip():
+    ERROR("Please enter a valid name for your server!")
+  server_name = server_name.strip()
+  server_folder = f'{drive_path}/{server_name}'
+
+  def SERVERSJAR(command, server_type=None, version=None):
+    if command == "GetVersions":
+      if server_type == None: ERROR("No server type specified.")
+      if server_type == 'vanilla' or server_type == 'snapshot':
+        rJSON = GET('https://launchermeta.mojang.com/mc/game/version_manifest.json').json()
+        st = 'release' if server_type == 'vanilla' else 'snapshot'
+        return [hit["id"] for hit in rJSON["versions"] if hit["type"] == st]
+      elif server_type == 'purpur':
+        rJSON = GET('https://api.purpurmc.org/v2/purpur').json()
+        return [hit for hit in rJSON["versions"]]
+      elif server_type == 'fabric':
+        rJSON = GET('https://meta.fabricmc.net/v2/versions/game').json()
+        return [hit['version'] for hit in rJSON if hit.get('stable')]
+      elif server_type == 'paper':
+        return ['26.3', '1.21.4', '1.20.4']
+      return ['26.3']
+
+    elif command == "GetDownloadUrl":
+      if version == None: ERROR("No version specified.")
+      if server_type == 'vanilla' or server_type == 'snapshot':
+        rJSON = GET('https://launchermeta.mojang.com/mc/game/version_manifest.json').json()
+        for hit in rJSON["versions"]:
+          if hit['id'] == version:
+            return GET(hit['url']).json()["downloads"]['server']['url']
+        return GET(rJSON["versions"][0]['url']).json()["downloads"]['server']['url']
+
+      elif server_type == 'purpur':
+        purpur_info = GET(f'https://api.purpurmc.org/v2/purpur/{version}').json()
+        build = purpur_info["builds"]["latest"]
+        return f'https://api.purpurmc.org/v2/purpur/{version}/{build}/download'
+
+      elif server_type == 'paper':
+        LOG("[ INFO ] Using Purpur (high performance drop-in Paper fork) for version " + version)
+        purpur_info = GET(f'https://api.purpurmc.org/v2/purpur/{version}').json()
+        build = purpur_info["builds"]["latest"]
+        return f'https://api.purpurmc.org/v2/purpur/{version}/{build}/download'
+
+      elif server_type == 'fabric':
+        installerVersion = GET('https://meta.fabricmc.net/v2/versions/installer').json()[0]["version"]
+        fabricVersion = GET(f'https://meta.fabricmc.net/v2/versions/loader/{version}').json()[0]["loader"]["version"]
+        return f"https://meta.fabricmc.net/v2/versions/loader/{version}/{fabricVersion}/{installerVersion}/server/jar"
+
+      else:
+        ERROR(f'Unsupported server type: {server_type}')
+
+  LOG(f"\nColab Version: {colabversion}")
+  makedirs(server_folder, exist_ok=True)
+  makedirs(f'{drive_path}/logs', exist_ok=True)
+  makedirs(f'{server_folder}/tunnel', exist_ok=True)
+
+  with open(f'{server_folder}/eula.txt', 'w') as f:
+    f.write('eula=true\n')
+
+  LOG(f'Setting up server: {server_name}')
+  LOG(f'Type: {server_type} | Version: {version} | Tunnel: {tunnel_service}')
+
+  if server_name not in serverconfig.get('server_list', []):
+    serverconfig.setdefault('server_list', []).append(server_name)
+  serverconfig['server_in_use'] = server_name
+
+  if tunnel_service == 'ngrok':
+    if "ngrok_proxy" not in serverconfig:
+      serverconfig["ngrok_proxy"] = {"authtoken": "", "region": "us"}
+    if ngrok_token != "":
+      serverconfig['ngrok_proxy']['authtoken'] = ngrok_token
+      serverconfig['ngrok_proxy']['region'] = ngrok_region
+    elif serverconfig['ngrok_proxy'].get('authtoken', '') == "":
+      t = input('Enter your ngrok authtoken (or press enter if already configured): ')
+      if t != "": serverconfig['ngrok_proxy']['authtoken'] = t
+
+  dump(serverconfig, open(SERVERCONFIG, 'w'))
+
+  colabconfig = {"server_type": server_type, "server_version": version, "tunnel_service": tunnel_service}
+  dump(colabconfig, open(COLABCONFIG(server_name), 'w'))
+
+  jarname = 'server.jar'
+  download_url = SERVERSJAR("GetDownloadUrl", server_type, version)
+  LOG(f"Downloading {server_type} {version} server jar...")
+  DOWNLOAD_FILE(url=download_url, path=server_folder, file_name=jarname, force=True)
+
+  print_msg_box(
+    f"Server \"{server_name}\" created successfully!\n"
+    f"Software: {server_type} | Version: {version} | Tunnel: {tunnel_service}\n\n"
+    f"Active Server is now set to \"{server_name}\"!\n"
+    f"Scroll down to Step 3 and click Run on the Console cell to start!",
+    indent=2, width=65, title="SERVER CREATED SUCCESSFULLY"
+  )
+
+
 
 
 # %% [code]
+# @title 🗑️ Delete Server { display-mode: "form" }
+# @markdown Permanently deletes the selected server folder from Google Drive:
 from os.path import exists
 from time import sleep
 from json import load, dump
@@ -367,10 +429,8 @@ import ipywidgets as widgets
 from jupyter_ui_poll import ui_events
 # @title ####**Delete current server**
 
-server_name = '' #  Get default server
-
-serverconfig = load(open(SERVERCONFIG));
-if server_name == '': server_name = serverconfig['server_in_use']
+serverconfig = load(open(SERVERCONFIG))
+server_name = SERVER_IN_USE(server_name if 'server_name' in globals() and server_name else '')
 if serverconfig['server_list'] == []: ERROR("You haven't installed yet.")
 else:
 
@@ -410,21 +470,258 @@ else:
   sleep(40)
   LOG('Completed')
 
-# %% [markdown]
-"""
------------------------------------------------------
-"""
+
+
+
 
 # %% [markdown]
 """
-# ▶ **or** 🛑  **Console**
 ---
-The main console for your minecraft server
+# 👑 **Step 3: Admin Privileges & Player Permissions (OP)**
+
+> [!IMPORTANT]
+> ### 🛡️ **Admin Rights & Gamemode Switching:**
+> - Add yourself (e.g. `skywalker`) as a **Level 4 Operator (Admin)** to use all commands.
+> - Switch gamemodes (`/gamemode creative`, `/gamemode survival`) without permission errors.
+> - Configures `allow-flight=true` in `server.properties` to prevent creative flight kicks.
+> - Runs seamlessly whether the server is currently **stopped** or **running live** (via local RCON).
+
 """
+
 
 # %% [code]
-# @title ▶️ or 🛑 Console (All-in-One Standalone) { display-mode: "form" }
-# @markdown Run this single cell to start your Minecraft 26.3 server!
+# @title 👑 Step 3: Manage Server Admins & Player Permissions (OP) { display-mode: "form" }
+# @markdown Grant administrator/operator (OP) permissions, switch player gamemodes, or execute live console commands:
+import os
+import sys
+import json
+import hashlib
+import uuid
+import socket
+import struct
+from os.path import exists, join
+from os import makedirs
+
+# @markdown #### **Player & Permission Settings**
+Player_Name = "skywalker" # @param {type:"string"}
+Action = "Grant Admin (OP)" # @param ["Grant Admin (OP)", "Revoke Admin (De-OP)", "Change Gamemode", "List All Admins", "Run Console Command", "Stop Server & Sync to Drive"]
+Permission_Level = 4 # @param [1, 2, 3, 4] {type:"raw"}
+Target_Gamemode = "creative" # @param ["creative", "survival", "adventure", "spectator"]
+Bypass_Player_Limit = True # @param {type:"boolean"}
+Custom_Command = "gamemode creative skywalker" # @param {type:"string"}
+
+# ----------------- HELPER FUNCTIONS -----------------
+def get_offline_uuid(name):
+  h = bytearray(hashlib.md5(f"OfflinePlayer:{name}".encode("utf-8")).digest())
+  h[6] = (h[6] & 0x0f) | 0x30
+  h[8] = (h[8] & 0x3f) | 0x80
+  return str(uuid.UUID(bytes=bytes(h)))
+
+def send_rcon_cmd(cmd, port=25575, password="colabadmin", timeout=2.5):
+  try:
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.settimeout(timeout)
+    s.connect(("127.0.0.1", port))
+    
+    # 1. Auth (Type 3)
+    auth_b = password.encode("utf-8")
+    auth_pkt = struct.pack("<iii", len(auth_b) + 10, 1, 3) + auth_b + b"\x00\x00"
+    s.sendall(auth_pkt)
+    
+    resp_hdr = s.recv(4)
+    if len(resp_hdr) < 4:
+      s.close(); return False, "Connection closed during auth."
+    resp_len = struct.unpack("<i", resp_hdr)[0]
+    resp_body = s.recv(resp_len)
+    resp_id = struct.unpack("<i", resp_body[:4])[0]
+    if resp_id == -1:
+      s.close(); return False, "RCON authentication failed (bad password)."
+      
+    # 2. Exec Command (Type 2)
+    cmd_b = cmd.encode("utf-8")
+    cmd_pkt = struct.pack("<iii", len(cmd_b) + 10, 2, 2) + cmd_b + b"\x00\x00"
+    s.sendall(cmd_pkt)
+    
+    resp_hdr = s.recv(4)
+    if len(resp_hdr) < 4:
+      s.close(); return False, "Connection closed during command."
+    resp_len = struct.unpack("<i", resp_hdr)[0]
+    resp_body = s.recv(resp_len)
+    out = resp_body[8:-2].decode("utf-8", errors="ignore").strip()
+    s.close()
+    return True, out
+  except Exception as e:
+    return False, str(e)
+
+# Determine Server Paths
+base_drive = "/content/drive/MyDrive/minecraft"
+s_name = "minecraft_26_3"
+if "server_name" in globals() and server_name:
+  s_name = server_name
+elif exists(f"{base_drive}/serverconfig.json"):
+  try:
+    sc = json.load(open(f"{base_drive}/serverconfig.json"))
+    if sc.get("server_in_use"): s_name = sc["server_in_use"]
+  except: pass
+
+paths_to_update = [f"/content/{s_name}", f"{base_drive}/{s_name}"]
+player = Player_Name.strip()
+
+print("=" * 70)
+print(f"👑 MINECRAFT ADMIN & GAMEMODE MANAGER - Server: {s_name}")
+print("=" * 70)
+
+rcon_live, _ = send_rcon_cmd("list")
+
+if Action == "Grant Admin (OP)":
+  u_uuid = get_offline_uuid(player)
+  print(f"👤 Target Player: {player}")
+  print(f"🔑 Offline UUID: {u_uuid}")
+  print(f"⭐ Permission Level: {Permission_Level} (Level 4 = Full Admin / Gamemode Access)")
+  
+  for p in paths_to_update:
+    if exists(p):
+      # 1. Update ops.json
+      ops_f = f"{p}/ops.json"
+      ops_list = []
+      if exists(ops_f):
+        try: ops_list = json.load(open(ops_f))
+        except: ops_list = []
+      ops_list = [o for o in ops_list if o.get("name", "").lower() != player.lower()]
+      ops_list.append({
+        "uuid": u_uuid,
+        "name": player,
+        "level": int(Permission_Level),
+        "bypassesPlayerLimit": bool(Bypass_Player_Limit)
+      })
+      with open(ops_f, "w", encoding="utf-8") as f:
+        json.dump(ops_list, f, indent=2)
+
+      # 2. Update whitelist.json
+      wl_f = f"{p}/whitelist.json"
+      wl_list = []
+      if exists(wl_f):
+        try: wl_list = json.load(open(wl_f))
+        except: wl_list = []
+      if not any(w.get("name", "").lower() == player.lower() for w in wl_list):
+        wl_list.append({"uuid": u_uuid, "name": player})
+      with open(wl_f, "w", encoding="utf-8") as f:
+        json.dump(wl_list, f, indent=2)
+
+      # 3. Ensure server.properties allows creative flight, op level 4, and persistent gamemode
+      prop_f = f"{p}/server.properties"
+      if exists(prop_f):
+        try:
+          with open(prop_f, "r", encoding="utf-8") as pf: lines = pf.readlines()
+          new_lines = [l for l in lines if not any(l.strip().startswith(k) for k in [
+            "allow-flight=", "op-permission-level=", "force-gamemode=", "enable-rcon=", "rcon.port=", "rcon.password=", "broadcast-rcon-to-ops="
+          ])]
+          new_lines.append("allow-flight=true\n")
+          new_lines.append("op-permission-level=4\n")
+          new_lines.append("force-gamemode=false\n")
+          new_lines.append("enable-rcon=true\n")
+          new_lines.append("rcon.port=25575\n")
+          new_lines.append("rcon.password=colabadmin\n")
+          new_lines.append("broadcast-rcon-to-ops=false\n")
+          with open(prop_f, "w", encoding="utf-8") as pf: pf.writelines(new_lines)
+        except Exception: pass
+
+  print(f"\n✅ Successfully saved Level {Permission_Level} Admin rights to ops.json on Drive and Local storage.")
+  print(f"✅ Configured: allow-flight=true, op-permission-level=4, force-gamemode=false")
+  
+  if rcon_live:
+    ok, resp = send_rcon_cmd(f"op {player}")
+    print(f"📡 [LIVE SERVER]: {resp if ok else 'Could not send live op command'}")
+    if Target_Gamemode:
+      ok2, resp2 = send_rcon_cmd(f"gamemode {Target_Gamemode} {player}")
+      print(f"🎮 [LIVE SERVER]: {resp2 if ok2 else 'Could not set gamemode'}")
+  else:
+    print(f"ℹ️  Server is currently stopped. All changes are saved permanently to Google Drive!")
+    print(f"👉 When you start the server, '{player}' will have Full Admin rights and can use '/gamemode {Target_Gamemode}' in-game without error.")
+
+elif Action == "Revoke Admin (De-OP)":
+  for p in paths_to_update:
+    if exists(p):
+      ops_f = f"{p}/ops.json"
+      if exists(ops_f):
+        try:
+          ops_list = json.load(open(ops_f))
+          ops_list = [o for o in ops_list if o.get("name", "").lower() != player.lower()]
+          with open(ops_f, "w", encoding="utf-8") as f: json.dump(ops_list, f, indent=2)
+        except: pass
+  if rcon_live:
+    ok, resp = send_rcon_cmd(f"deop {player}")
+    print(f"📡 [LIVE SERVER]: {resp if ok else 'Could not send deop'}")
+  print(f"✅ Revoked operator permissions for '{player}'.")
+
+elif Action == "Change Gamemode":
+  if rcon_live:
+    ok, resp = send_rcon_cmd(f"gamemode {Target_Gamemode} {player}")
+    print(f"🎮 [LIVE SERVER]: {resp if ok else 'Error setting gamemode'}")
+  else:
+    print(f"ℹ️  To change gamemode when server is offline, make sure '{player}' is granted OP first.")
+    print(f"    Then in-game, you can type '/gamemode {Target_Gamemode}' or press F3+F4 anytime!")
+
+elif Action == "List All Admins":
+  found = False
+  for p in paths_to_update:
+    ops_f = f"{p}/ops.json"
+    if exists(ops_f):
+      try:
+        data = json.load(open(ops_f))
+        print(f"📂 Source: {ops_f}")
+        for o in data:
+          print(f"  • {o.get('name')} (Level: {o.get('level')}) - UUID: {o.get('uuid')}")
+        found = True
+        break
+      except: pass
+  if not found:
+    print("ℹ️  No admins found in ops.json yet.")
+
+elif Action == "Run Console Command":
+  if rcon_live:
+    ok, resp = send_rcon_cmd(Custom_Command)
+    print(f"📡 Command: {Custom_Command}")
+    print(f"📝 Response: {resp if ok else 'Failed: ' + str(resp)}")
+  else:
+    print(f"⚠️ Server is not running. Start the server first to execute live console commands.")
+
+elif Action == "Stop Server & Sync to Drive":
+  if rcon_live:
+    send_rcon_cmd("stop")
+    print("🛑 Sent stop command to Minecraft server...")
+  else:
+    !pkill -f "server.jar" >/dev/null 2>&1 || true
+  import time
+  time.sleep(3)
+  loc = f"/content/{s_name}"
+  drv = f"{base_drive}/{s_name}"
+  if exists(loc) and exists(drv):
+    print("💾 Syncing local server state back to Google Drive...")
+    !rsync -a --delete '{loc}/' '{drv}/'
+    print("✅ All world data safely saved to Google Drive!")
+print("=" * 70)
+
+
+
+# %% [markdown]
+"""
+---
+# 🎮 **Step 4: Launch Minecraft Server Console**
+
+> [!TIP]
+> ### 🚀 **Server Startup & Connection:**
+> - Click **Run (▶)** on the cell below to start your Minecraft server.
+> - **Connection Address**: Watch the console output for the **Playit Claim Link** or your direct server IP (e.g. `*.gl.joinmc.link`).
+> - **Offline / TLauncher**: Enabled by default (`online-mode=false`).
+> - **Automatic Saves**: World data runs on local high-speed NVMe and syncs to Google Drive every 5 minutes and when stopping.
+
+"""
+
+
+# %% [code]
+# @title 🚀 Step 4: Launch Minecraft Server Console { display-mode: "form" }
+# @markdown **Run this single cell to start your Minecraft server!** (Automatically syncs world to fast local storage and launches the tunnel).
 import os
 import sys
 import shutil
@@ -466,7 +763,7 @@ def print_msg_box(msg, indent=1, width=None, title=None):
   print(border)
 
 # Get Server Name
-server_name = 'minecraft_26_3'
+server_name = SERVER_IN_USE(server_name if 'server_name' in globals() and server_name else '')
 if exists(SERVERCONFIG):
   try:
     s_cfg = load(open(SERVERCONFIG))
@@ -478,6 +775,18 @@ if exists(SERVERCONFIG):
 tunnel_service = 'playit'
 version = '26.3'
 _type = 'purpur'
+
+# Auto-detect version and type from server configuration if available
+colab_conf_file = f'{drive_path}/{server_name}/colabconfig.json'
+if exists(colab_conf_file):
+  try:
+    c_cfg = load(open(colab_conf_file))
+    if c_cfg.get('server_version'): version = c_cfg['server_version']
+    if c_cfg.get('server_type'): _type = c_cfg['server_type']
+    if c_cfg.get('tunnel_service'): tunnel_service = c_cfg['tunnel_service']
+    LOG(f"Loaded config from {server_name}: Type={_type}, Version={version}, Tunnel={tunnel_service}")
+  except Exception:
+    pass
 
 def CONFIG_PLAYIT():
   !pkill -9 playit >/dev/null 2>&1 || true
@@ -560,7 +869,20 @@ def CONFIGURE_SERVER(run_dir):
     except Exception:
       pass
 
-  filtered = [l for l in existing_lines if not any(l.strip().startswith(k) for k in ['online-mode=', 'white-list=', 'enforce-whitelist='])]
+  filtered = [l for l in existing_lines if not any(l.strip().startswith(k) for k in [
+    'online-mode=', 'white-list=', 'enforce-whitelist=', 'allow-flight=',
+    'op-permission-level=', 'force-gamemode=', 'enable-rcon=', 'rcon.port=', 'rcon.password=', 'broadcast-rcon-to-ops='
+  ])]
+  filtered.append('online-mode=false\n')
+  filtered.append('white-list=false\n')
+  filtered.append('enforce-whitelist=false\n')
+  filtered.append('allow-flight=true\n')
+  filtered.append('op-permission-level=4\n')
+  filtered.append('force-gamemode=false\n')
+  filtered.append('enable-rcon=true\n')
+  filtered.append('rcon.port=25575\n')
+  filtered.append('rcon.password=colabadmin\n')
+  filtered.append('broadcast-rcon-to-ops=false\n')
   filtered.append('online-mode=false\n')
   filtered.append('white-list=false\n')
   filtered.append('enforce-whitelist=false\n')
@@ -626,7 +948,11 @@ if exists(drive_server_path) and listdir(drive_server_path):
 
 %cd $local_server_path
 
+if exists(f'{drive_server_path}/ops.json') and not exists(f'{local_server_path}/ops.json'):
+  !cp '{drive_server_path}/ops.json' '{local_server_path}/ops.json'
 CONFIGURE_SERVER(local_server_path)
+if exists(f'{local_server_path}/ops.json'):
+  !cp '{local_server_path}/ops.json' '{drive_server_path}/ops.json'
 INSTALL_JAVA()
 CONFIG_PLAYIT()
 
@@ -647,19 +973,22 @@ finally:
   LOG("✅ Saved successfully to Google Drive! Server stopped.")
 
 
-# %% [markdown]
-"""
----
-"""
+
+
+
 
 # %% [markdown]
 """
-# ⚓ **Options** (Java Only!)
 ---
+# ⚙️ **Server Options & Properties**
+> Customize your server branding, player capacity, game rules, and difficulty settings.
 
 """
+
 
 # %% [code]
+# @title 🎨 Server MOTD & Icon Customizer { display-mode: "form" }
+# @markdown Upload a 64x64 icon or customize the server MOTD message:
 from jproperties import Properties
 from os.path import exists
 from google.colab import files as fls
@@ -669,7 +998,7 @@ from PIL import Image
 # @markdown ####**Server_custom**
 choice = 'server_motd' # @param ["server_motd", "server_icon"]
 
-server_name = SERVER_IN_USE(server_name = '')
+server_name = SERVER_IN_USE(server_name if 'server_name' in globals() and server_name else '')
 file_path = f'{drive_path}/server-icon.png'
 file_dest = f'{drive_path}/{server_name}/'
 
@@ -701,7 +1030,12 @@ else:
     LOG("MOTD updated to: " + motd)
 
 
+
+
+
 # %% [code]
+# @title ⚙️ Edit server.properties { display-mode: "form" }
+# @markdown Configure gameplay rules (player limit, difficulty, PvP, cracked/TLauncher accounts):
 from jproperties import Properties
 from os.path import exists
 
@@ -722,7 +1056,7 @@ Spawn_protection = 16 # @param {type:"slider", min:0, max:100, step:1}
 
 #---------------------------------------------------------------------------------- MAIN CODE ------------------------------------------------------------------------------------#
 
-server_name = SERVER_IN_USE(server_name = '')
+server_name = SERVER_IN_USE(server_name if 'server_name' in globals() and server_name else '')
 if exists(f"{drive_path}/{server_name}/server.properties") == False: ERROR(' Running your minecraft server before editing properties')
 else:
   LOG('Changing server.properties')
@@ -741,25 +1075,27 @@ else:
       server_properties.store(f, encoding="utf-8")
   LOG('Completed')
 
-# %% [markdown]
-"""
----
-"""
+
+
 
 # %% [markdown]
 """
-# 📎  **Log** (Java Only!)
 ---
+# 📜 **Server Logs**
+> Inspect the latest server log file (`latest.log`) to check player activity, commands, or plugin errors.
 
 """
+
 
 # %% [code]
+# @title 📜 View Server Log { display-mode: "form" }
+# @markdown Displays the latest server logs and chat output:
 from os.path import exists
 from rich.console import Console
 
 # @markdown ####**Shows latest log of your minecraft server**
 LOG(f"\nColab Version: {colabversion}")
-server_name = SERVER_IN_USE(server_name = '')
+server_name = SERVER_IN_USE(server_name if 'server_name' in globals() and server_name else '')
 log_path = f'{drive_path}/{server_name}/logs/latest.log'
 console = Console()
 if exists(log_path):
@@ -772,26 +1108,21 @@ else:
   INFO("Log file not found yet. Has the server run at least once?")
 
 
-# %% [markdown]
-"""
----
 
-"""
+
 
 # %% [markdown]
 """
-# 📰  **Software**
 ---
+# 📰 **Server Software & Tunnel Providers**
+> Reinstall software (Paper, Purpur, Fabric, Forge, Bedrock) or switch tunnel providers (Playit, Ngrok, Argo, Localtonet, Zrok).
 
-Change server software, tunnel and others.
-
----
-
-+ Please checking whether your minecraft server is in Gdrive or not.
 """
+
 
 # %% [code]
-
+# @title 🔄 Reinstall / Change Server Software { display-mode: "form" }
+# @markdown Switch software type (Purpur, Paper, Fabric, Vanilla, Bedrock, etc.) or update core jar:
 from json import load, dump
 from requests import get
 from bs4 import BeautifulSoup
@@ -803,7 +1134,7 @@ from jupyter_ui_poll import ui_events
 # @markdown #### **Change server software**
 # @markdown This cell will help you change the type of server you're running. Keep in mind this will delete your current server.
 
-serverconfig = load(open(SERVERCONFIG)); server_name = serverconfig['server_in_use']; colabconfig = load(open(COLABCONFIG(server_name)))
+server_name = SERVER_IN_USE(server_name if 'server_name' in globals() and server_name else ''); serverconfig = load(open(SERVERCONFIG)); colabconfig = COLABCONFIG_LOAD(server_name)
 
 # GUIDANCE
 choice = input('Do you want to show(s)/hide(h) tunnels info? - ')
@@ -1108,15 +1439,12 @@ else:
   sleep(40)
   LOG('\nCompleted!')
 
-# %% [markdown]
-"""
-## **🌐 Tunneling options**
----
 
-"""
+
 
 # %% [code]
-# @title Change Tunnel Service
+# @title 🌐 Change Tunnel Provider { display-mode: "form" }
+# @markdown Switch between Playit, Ngrok, Cloudflare Argo, Localtonet, or Zrok:
 from json import load, dump
 from requests import get
 from bs4 import BeautifulSoup
@@ -1127,7 +1455,7 @@ from time import sleep
 tunnel_service = "minekube-gate" # @param ["Leave as it is", "argo", "zrok", "playit", "localtonet", "localxpose", "ngrok", "tailscale", "minekube-gate"]
 
 serverconfig = load(open(SERVERCONFIG));
-server_name = serverconfig['server_in_use']
+server_name = SERVER_IN_USE(server_name if 'server_name' in globals() and server_name else '')
 colabconfig = load(open(COLABCONFIG(server_name)))
 
 # GUIDANCE
@@ -1153,13 +1481,12 @@ else:
 
   LOG(f'\nDONE. Tunnel Service changed to {tunnel_service}')
 
-# %% [markdown]
-"""
----
-"""
+
+
 
 # %% [code]
-# @title Change Tunnel Token
+# @title 🔑 Set Tunnel Auth Token { display-mode: "form" }
+# @markdown Configure authentication tokens for Ngrok, Localtonet, or Zrok:
 from json import load, dump
 from requests import get
 from bs4 import BeautifulSoup
@@ -1170,7 +1497,7 @@ from time import sleep
 tunnel_service = "minekube-gate" # @param ["zrok", "localtonet", "localxpose", "ngrok", "tailscale", "minekube-gate"]
 
 serverconfig = load(open(SERVERCONFIG));
-server_name = serverconfig['server_in_use']
+server_name = SERVER_IN_USE(server_name if 'server_name' in globals() and server_name else '')
 colabconfig = load(open(COLABCONFIG(server_name)))
 
 # GUIDANCE
@@ -1240,13 +1567,12 @@ dump(serverconfig, open(SERVERCONFIG, 'w'))
 LOG('\nDONE. Tunnel Token changed.')
 LOG('\nMake sure to execute the "Change Tunnel Service" cell to use the correct tunnel provider.')
 
-# %% [markdown]
-"""
----
-"""
+
+
 
 # %% [code]
-# @title Playit Options
+# @title 🛡️ Playit.gg Tunnel Options { display-mode: "form" }
+# @markdown Manage Playit agent secrets and tunnel configuration:
 from json import load, dump
 from requests import get
 from bs4 import BeautifulSoup
@@ -1255,7 +1581,7 @@ from time import sleep
 from toml import load as tload
 option = "Setup / Reset agent (for key renewal)" # @param ["Setup / Reset agent (for key renewal)","Reset agent (wipe)","Save secret key to drive","Change/set secret key"]
 serverconfig = load(open(SERVERCONFIG));
-server_name = serverconfig['server_in_use']
+server_name = SERVER_IN_USE(server_name if 'server_name' in globals() and server_name else '')
 colabconfig = load(open(COLABCONFIG(server_name)))
 
 # GUIDANCE
@@ -1327,21 +1653,21 @@ elif option == "Reset agent (wipe)": # Resets playit token from colab and colab 
   dump(serverconfig, open(SERVERCONFIG, 'w'))
   LOG("DONE.")
 
-# %% [markdown]
-"""
----
-"""
+
+
 
 # %% [markdown]
 """
-# 🎈  **Plugins, mods** (Java Only!)
-
-####Download modpack/mod/plugin from [curseforge](https://www.curseforge.com/Minecraft) and [modrinth](https://modrinth.com/)
 ---
+# 🧩 **Plugins & Mods Downloader**
+> Search and automatically install plugins, mods, and modpacks directly from **CurseForge** and **Modrinth**.
 
 """
+
 
 # %% [code]
+# @title 🧩 Download Plugins & Mods { display-mode: "form" }
+# @markdown Search and download mods/plugins directly from CurseForge or Modrinth:
 from pyngrok import conf, ngrok
 from os import environ, pathsep, listdir
 from zipfile import ZipFile
@@ -1368,7 +1694,7 @@ project_types = 'none' # @param ['none', 'default', 'mods', 'plugins', 'modpacks
 index = 'none' #@param ['none', 'relevance', 'downloads', 'follows', 'newest', 'updated']
 
 # CHecking and setting variable
-server_name = SERVER_IN_USE(server_name = '')
+server_name = SERVER_IN_USE(server_name if 'server_name' in globals() and server_name else '')
 if exists(f"{drive_path}/{server_name}/server.properties") == False: ERROR(' Running your minecraft server before editing properties')
 else:
   colabconfig = COLABCONFIG_LOAD(server_name)
@@ -1665,24 +1991,26 @@ class Download_:
 LOG(f"\nColab Version: {colabversion}")
 Download_(choice = choice, url = url, server_name = server_name, categories = categories, versions= versions, project_types= project_types, index= index).Install_( search_name = search_name.lower(), software = software)
 
-# %% [markdown]
-"""
----
-"""
+
+
 
 # %% [markdown]
 """
-# **📁 File Management** (Java Only!)
 ---
+# 📁 **Backups & World Maps**
+> Create zip backups of your worlds or upload custom map files.
 
 """
+
 
 # %% [code]
+# @title 💾 Backup Server or World { display-mode: "form" }
+# @markdown Create a compressed `.zip` backup of your world or server files to Google Drive:
 from os.path import exists
 from time import sleep
 LOG(f"\nColab Version: {colabversion}")
 # @markdown #### **Back up server or file?**
-server_name= SERVER_IN_USE(server_name= '')
+server_name = SERVER_IN_USE(server_name if 'server_name' in globals() and server_name else '')
 path = '/content/drive/MyDrive/minecraft' # Default path. Change to any location you wanna
 choice = 'server' # @param ['server', 'file']
 file_name = ''; file_backup = '';  server_backup = ''
@@ -1715,7 +2043,13 @@ INFO('We recommend you to download manually on Google Drive, anyways.')
 choice = input('Download your file? (y/n) : ')
 if choice == 'y': fls.download(f'{path2}.zip')
 
+
+
+
+
 # %% [code]
+# @title 🗺️ Upload Custom World Map { display-mode: "form" }
+# @markdown Upload a custom world `.zip` or download one directly from a URL:
 from google.colab import files as fls
 from os import listdir
 LOG(f"\nColab Version: {colabversion}")
@@ -1724,7 +2058,7 @@ LOG(f"\nColab Version: {colabversion}")
 # @markdown #### **World map uploader**
 choice = 'upload_file' # @param ['upload_file', 'url']
 world  = 'see all available' # @param ['see all available', 'world', 'world_nether', 'world_the_end']
-server_name = SERVER_IN_USE(server_name = '')
+server_name = SERVER_IN_USE(server_name if 'server_name' in globals() and server_name else '')
 print(server_name)
 
 if exists(f"{drive_path}/{server_name}/world") == False: ERROR('Running your minecraft server')
@@ -1758,13 +2092,21 @@ else:
     except: ERROR("Lol, you didn't upload file yet.")
   %cd $drive_path
 
+
+
+
 # %% [markdown]
 """
-# **⚡ Server Improvement** (Java Only!)
 ---
+# ⚡ **Server Performance & TPS Optimization**
+> Applies Aikar's optimized garbage collection flags, tick settings, and rendering parameters for smooth 20 TPS gameplay.
+
 """
 
+
 # %% [code]
+# @title ⚡ Server Performance & TPS Optimizer { display-mode: "form" }
+# @markdown Applies optimized garbage collection, tick distance, and Aikar's performance flags:
 from jproperties import Properties
 from os.path import exists
 from time import sleep
@@ -1778,7 +2120,7 @@ LOG(f"\nColab Version: {colabversion}")
 
 #---------------------------------------------------------------------------------- MAIN CODE ------------------------------------------------------------------------------------#
 
-server_name = SERVER_IN_USE(server_name = ''); colabconfig = COLABCONFIG_LOAD(server_name)
+server_name = SERVER_IN_USE(server_name if 'server_name' in globals() and server_name else ''); colabconfig = COLABCONFIG_LOAD(server_name)
 if exists(f'{drive_path}/{server_name}/plugins') == True or exists(f'{drive_path}/{server_name}/mods') == True:
   if exists(f'{drive_path}/{server_name}/plugins') == True: path = f'{drive_path}/{server_name}/plugins'
   elif exists(f'{drive_path}/{server_name}/mods') == True: path = f'{drive_path}/{server_name}/mods'
@@ -1881,4 +2223,6 @@ if 'y' in choice.lower():
   LOG('Minecraft exploits and how to fix them: To see how to fix exploits that can cause lag spikes or crashes on a Minecraft server, refer to https://github.com/YouHaveTrouble/minecraft-exploits-and-how-to-fix-them')
 
 LOG('Completed')
+
+
 

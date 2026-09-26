@@ -47,22 +47,33 @@ Click the badge below to open the notebook directly in your browser:
 
 ### Step 2: First-Time Setup
 If this is your first time creating the server:
-1. Run **Cell 2 — `[❗] Set up`** to mount your Google Drive (`/content/drive/MyDrive/minecraft`).
-2. Run **Cell 6 — `🛠️ Create Server`** (pre-configured for **Purpur 26.3** and **Playit**). It will download the server JAR and pre-accept the EULA.
+1. Run **Step 1 — `🛠️ Initialize Environment & Mount Google Drive`** to mount your Google Drive (`/content/drive/MyDrive/minecraft`).
+2. Run **Step 2 — `🎯 Choose or Create Minecraft Server`** (pre-configured for **Purpur 26.3** and **Playit**). It downloads the server JAR and pre-accepts the EULA.
 
 ---
 
-### Step 3: Start Your Server
-Run the **`▶️ or 🛑 Console (All-in-One Standalone)`** cell.
+### Step 3: Configure Admin Privileges (OP & Gamemodes)
+Run **Step 3 — `👑 Manage Server Admins & Player Permissions (OP)`**:
+1. Enter your Minecraft player name (e.g. `skywalker`).
+2. Choose **Permission Level 4** (Full Admin / Operator).
+3. Set your target gamemode to `creative` (or `survival`).
+4. Click **Run (▶)**!
+   - Calculates the exact offline-mode UUID used by TLauncher / cracked clients.
+   - Automatically writes permissions to `ops.json` on both Google Drive and local storage.
+   - Automatically enables `allow-flight=true` in `server.properties` so creative flight never kicks you.
+   - If the server is already running, it sends live `/op` and `/gamemode` commands immediately via local RCON!
 
-1. It will initialize local NVMe storage, provision Java 25, and launch the **Playit.gg** tunnel daemon.
+---
+
+### Step 4: Start Your Server
+Run **Step 4 — `🚀 Launch Minecraft Server Console`**:
+
+1. It initializes local NVMe storage, provisions Java 25 LTS, and launches the **Playit.gg** tunnel daemon.
 2. In ~15 seconds, you will see:
    ```text
    [INFO]: Done (xx.xxxs)! For help, type "help"
    ```
 3. **Your server is now live!**
-
----
 
 ## 🌐 Connecting to Your Server
 
@@ -88,15 +99,16 @@ Run the **`▶️ or 🛑 Console (All-in-One Standalone)`** cell.
 
 ---
 
-## ⚙️ In-Game Commands & Admin Rights
+## 👑 In-Game Admin Rights & Gamemode Commands
 
-You are automatically registered as Level 4 Server Operator (Admin) in `ops.json`. 
-
-You can also run commands directly from the console prompt `>`:
-* `/gamemode creative` — Switch to Creative mode.
-* `/teleport <player> <target>` — Teleport players.
-* `/whitelist add <username>` — Whitelist a specific player if you choose to enable whitelisting.
-* `stop` — Safely save the world and stop the server.
+With Level 4 Operator status granted from **Step 3**, you can use all in-game commands in Minecraft:
+* `/gamemode creative` — Switch to Creative Mode (flying, unlimited blocks).
+* `/gamemode survival` — Switch back to Survival Mode.
+* `/gamemode spectator` — Fly through walls and spectate the world.
+* `F3 + F4` — Quickly toggle between game modes.
+* `/teleport <player> <target>` — Teleport anywhere.
+* `/time set day` / `/weather clear` — Control time and weather.
+* `/stop` — Safely save the world and stop the server.
 
 ---
 
